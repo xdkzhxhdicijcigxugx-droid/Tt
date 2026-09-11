@@ -1,5 +1,5 @@
 --==================================================
---    SCOOP GUI - ULTIMATE EXECUTOR EDITION v4.7 (ALL-IN-ONE HUB)
+--    SCOOP GUI - ULTIMATE EXECUTOR EDITION v4.9 (ANTITROLL)
 --==================================================
 
 local Players = game:GetService("Players")
@@ -27,6 +27,8 @@ local GuiScale = 0.85
 
 local espBoxEnabled = false
 local espTracerEnabled = false
+local espHealthBarEnabled = true
+local espDistanceEnabled = true
 local fullbrightEnabled = false
 local espStorage = {}
 
@@ -52,6 +54,22 @@ local noclipActive = false
 local flyEnabled = false
 local originalSizes = {}
 
+-- New Features v4.8 Variables
+local antiCheatBypassActive = false
+local autoExecuteEnabled = false
+local targetTeleportName = ""
+local chamsEnabled = false
+local chamsStorage = {}
+local memoryCleanupConnections = {}
+
+-- Anti-Troll Features Variables (v4.9)
+local antiSoundSpamActive = false
+local antiFlingActive = false
+local antiToolsDropActive = false
+local antiStunActive = false
+local antiTpKillActive = false
+local originalRootCFrame = nil
+
 -- New Features Variables
 local spectatingPlayer = nil
 local potatoModeActive = false
@@ -60,6 +78,7 @@ local potatoOverlay = nil
 
 -- Saved Scripts System
 local fileName = "ScoopExecutor_SavedScripts.json"
+local autoExecuteFileName = "ScoopExecutor_AutoExecute.lua"
 local savedScripts = {
 	{ Name = "Infinite Yield", Code = "loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()" },
 	{ Name = "Dark Dex V3 (dex)", Code = "loadstring(game:HttpGet('https://cdn.jsdelivr.net/gh/Babyhamsta/RBLX_Scripts/Universal/Dex.lua'))()" }
@@ -149,71 +168,6 @@ local function SendNotification(title, text, duration)
     end)
 end
 
--- ฟังก์ชันแจ้งเตือนเปลี่ยนภาษาดีไซน์โมเดิร์น
-local function ShowThaiLanguageNotification()
-    if gui:FindFirstChild("LanguageNotification") then
-        gui.LanguageNotification:Destroy()
-    end
-
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "LanguageNotification"
-    screenGui.Parent = gui
-
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 320, 0, 80)
-    frame.Position = UDim2.new(1, -340, 0, -100)
-    frame.BackgroundColor3 = Color3.fromRGB(24, 24, 37)
-    frame.BorderSizePixel = 0
-    frame.Parent = screenGui
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 10)
-    corner.Parent = frame
-
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = ThemeColor
-    stroke.Transparency = 0.4
-    stroke.Parent = frame
-
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(1, -24, 0, 26)
-    titleLabel.Position = UDim2.new(0, 12, 0, 10)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titleLabel.TextSize = 15
-    titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    titleLabel.Text = "เปลี่ยนภาษาสำเร็จ"
-    titleLabel.Parent = frame
-
-    local msgLabel = Instance.new("TextLabel")
-    msgLabel.Size = UDim2.new(1, -24, 0, 34)
-    msgLabel.Position = UDim2.new(0, 12, 0, 36)
-    msgLabel.BackgroundTransparency = 1
-    msgLabel.TextColor3 = Color3.fromRGB(180, 180, 195)
-    msgLabel.TextSize = 13
-    msgLabel.Font = Enum.Font.Gotham
-    msgLabel.TextXAlignment = Enum.TextXAlignment.Left
-    msgLabel.TextWrapped = true
-    msgLabel.Text = "ระบบได้เปลี่ยนเป็นภาษาไทยเรียบร้อยแล้ว"
-    msgLabel.Parent = frame
-
-    local tweenIn = TweenService:Create(frame, TweenInfo.new(0.45, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-        Position = UDim2.new(1, -340, 0, 20)
-    })
-    tweenIn:Play()
-
-    task.spawn(function()
-        task.wait(3.5)
-        local tweenOut = TweenService:Create(frame, TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
-            Position = UDim2.new(1, -340, 0, -100)
-        })
-        tweenOut:Play()
-        tweenOut.Completed:Wait()
-        screenGui:Destroy()
-    end)
-end
-
 --==================================================
 -- MAIN WINDOW
 --==================================================
@@ -280,7 +234,7 @@ title.Name = "Title"
 title.Size = UDim2.new(0, 250, 1, 0)
 title.Position = UDim2.fromOffset(54, 0)
 title.BackgroundTransparency = 1
-title.Text = "SCOOP ALL-IN-ONE HUB v4.7"
+title.Text = "SCOOP ALL-IN-ONE HUB v4.9"
 title.TextColor3 = Color3.fromRGB(255,255,255)
 title.TextSize = 15
 title.Font = Enum.Font.GothamBlack
@@ -499,8 +453,9 @@ end
 local homeScroll = createPageScroll("HomeScroll")
 local playerScroll = createPageScroll("PlayerScroll")
 local teleportScroll = createPageScroll("TeleportScroll")
-local serverHopScroll = createPageScroll("ServerHopScroll") -- แท็บใหม่: ย้ายเชิฟ
+local serverHopScroll = createPageScroll("ServerHopScroll")
 local itemsScroll = createPageScroll("ItemsScroll")
+local antiTrollScroll = createPageScroll("AntiTrollScroll") -- เพิ่มแท็บกันโดนแกล้งใหม่
 local playerLockScroll = createPageScroll("PlayerLockScroll")
 local optimizationScroll = createPageScroll("OptimizationScroll") 
 local inspectorScroll = createPageScroll("InspectorScroll")     
@@ -544,8 +499,9 @@ end
 local homeBtn = createSideButton("HOME")
 local playerBtn = createSideButton("PLAYER")
 local tpBtn = createSideButton("TELEPORT")
-local serverHopBtn = createSideButton("ย้ายเชิฟ") -- ปุ่มแท็บใหม่
+local serverHopBtn = createSideButton("ย้ายเชิฟ")
 local itemsBtn = createSideButton("ITEMS & ESP")
+local antiTrollBtn = createSideButton("🛡️ กันโดนแกล้ง") -- ปุ่มเปิดแท็บกันโดนแกล้ง
 local playerLockBtn = createSideButton("PLAYER LOCK")
 local optBtn = createSideButton("OPTIMIZATION")
 local inspectBtn = createSideButton("PLAYER INSPECT")
@@ -559,6 +515,7 @@ local function clearPage()
 	teleportScroll.Visible = false
 	serverHopScroll.Visible = false
 	itemsScroll.Visible = false
+	antiTrollScroll.Visible = false
 	playerLockScroll.Visible = false
 	optimizationScroll.Visible = false
 	inspectorScroll.Visible = false
@@ -568,10 +525,11 @@ local function clearPage()
 end
 
 homeBtn.MouseButton1Click:Connect(function() clearPage(); pageTitle.Text = "HOME"; homeScroll.Visible = true end)
-playerBtn.MouseButton1Click:Connect(function() clearPage(); pageTitle.Text = "PLAYER MODS"; playerScroll.Visible = true end)
+playerBtn.MouseButton1Click:Connect(function() clearPage(); pageTitle.Text = "PLAYER MODS & BYPASS"; playerScroll.Visible = true end)
 tpBtn.MouseButton1Click:Connect(function() clearPage(); pageTitle.Text = "TELEPORT SYSTEM"; teleportScroll.Visible = true end)
 serverHopBtn.MouseButton1Click:Connect(function() clearPage(); pageTitle.Text = "SERVER HOP SYSTEM"; serverHopScroll.Visible = true end)
-itemsBtn.MouseButton1Click:Connect(function() clearPage(); pageTitle.Text = "ITEMS & ESP"; itemsScroll.Visible = true end)
+itemsBtn.MouseButton1Click:Connect(function() clearPage(); pageTitle.Text = "ITEMS & ADVANCED ESP"; itemsScroll.Visible = true end)
+antiTrollBtn.MouseButton1Click:Connect(function() clearPage(); pageTitle.Text = "ANTI-TROLL & PROTECTION SYSTEM"; antiTrollScroll.Visible = true end)
 playerLockBtn.MouseButton1Click:Connect(function() clearPage(); pageTitle.Text = "PLAYER LOCK SYSTEM"; playerLockScroll.Visible = true end)
 optBtn.MouseButton1Click:Connect(function() clearPage(); pageTitle.Text = "OPTIMIZATION & POWER SAVER"; optimizationScroll.Visible = true end)
 inspectBtn.MouseButton1Click:Connect(function() clearPage(); pageTitle.Text = "PLAYER INSPECTOR & SPECTATE"; inspectorScroll.Visible = true end)
@@ -665,7 +623,7 @@ RunService.Heartbeat:Connect(function()
 end)
 
 --==================================================
--- PLAYER TAB
+-- PLAYER TAB (WITH BYPASS & FEATURES)
 --==================================================
 
 local function createToggleButton(parent, text, initialStatus, callback)
@@ -698,6 +656,25 @@ local function createToggleButton(parent, text, initialStatus, callback)
 	end)
 	return btn
 end
+
+createToggleButton(playerScroll, "🛡️ ระบบจำลอง Anti-Cheat Bypass", false, function(state)
+	antiCheatBypassActive = state
+	if antiCheatBypassActive then
+		pcall(function()
+			local mt = getrawmetatable(game)
+			setreadonly(mt, false)
+			local oldNamecall = mt.__namecall
+			mt.__namecall = newcclosure(function(self, ...)
+				local method = getnamecallmethod()
+				if method == "Kick" or method == "kick" then
+					return nil
+				end
+				return oldNamecall(self, ...)
+			end)
+			setreadonly(mt, true)
+		end)
+	end
+end)
 
 createToggleButton(playerScroll, "เปิดใช้งาน WalkSpeed กำหนดเอง", false, function(state)
 	useWalkSpeed = state
@@ -746,30 +723,6 @@ RunService.RenderStepped:Connect(function()
 			root.OmegaFly:Destroy()
 		end
 	end
-end)
-
--- เพิ่มปุ่มจำลองการเปลี่ยนภาษาที่เรียกใช้ Notification สวยๆ
-local langBtn = Instance.new("TextButton")
-langBtn.Size = UDim2.new(1, -4, 0, 36)
-langBtn.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
-langBtn.BorderSizePixel = 0
-langBtn.Text = "🌐 เปลี่ยนภาษาเป็นภาษาไทย (Change Language)"
-langBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-langBtn.TextSize = 11
-langBtn.Font = Enum.Font.GothamBold
-langBtn.AutoButtonColor = false
-langBtn.Parent = playerScroll
-
-local langCorner = Instance.new("UICorner")
-langCorner.CornerRadius = UDim.new(0, 7)
-langCorner.Parent = langBtn
-local langStroke = Instance.new("UIStroke")
-langStroke.Color = ThemeColor
-langStroke.Thickness = 1
-langStroke.Parent = langBtn
-
-langBtn.MouseButton1Click:Connect(function()
-    ShowThaiLanguageNotification()
 end)
 
 local sliderObjects = {}
@@ -897,7 +850,106 @@ RunService.Heartbeat:Connect(function()
 end)
 
 --==================================================
--- TELEPORT TAB
+-- ANTI-TROLL & PROTECTION TAB (v4.9 NEW)
+--==================================================
+
+createToggleButton(antiTrollScroll, "🔇 ป้องกันสแปมเสียง (Anti Sound Spam)", false, function(state)
+	antiSoundSpamActive = state
+	task.spawn(function()
+		while antiSoundSpamActive do
+			for _, sound in pairs(Workspace:GetDescendants()) do
+				if sound:IsA("Sound") and sound.Playing and sound.Parent ~= player.Character then
+					sound:Stop()
+				end
+			end
+			task.wait(0.5)
+		end
+	end)
+end)
+
+createToggleButton(antiTrollScroll, "🌀 ป้องกันคนปั่นตัวปลิว (Anti Fling / Spin Exploit)", false, function(state)
+	antiFlingActive = state
+	task.spawn(function()
+		while antiFlingActive do
+			pcall(function()
+				local char = player.Character
+				local root = char and char:FindFirstChild("HumanoidRootPart")
+				if root then
+					if root.AssemblyAngularVelocity.Magnitude > 50 or root.AssemblyLinearVelocity.Magnitude > 150 then
+						root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+						root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+					end
+				end
+			end)
+			task.wait(0.1)
+		end
+	end)
+end)
+
+createToggleButton(antiTrollScroll, "🎒 ป้องกันคนแย่งหรือดึงไอเทม (Anti Tool Steal/Drop)", false, function(state)
+	antiToolsDropActive = state
+	task.spawn(function()
+		while antiToolsDropActive do
+			pcall(function()
+				local bp = player:FindFirstChild("Backpack")
+				if bp then
+					for _, tool in pairs(bp:GetChildren()) do
+						if tool:IsA("Tool") then
+							tool.Parent = player.Character
+							task.wait(0.1)
+							tool.Parent = bp
+						end
+					end
+				end
+			end)
+			task.wait(2)
+		end
+	end)
+end)
+
+createToggleButton(antiTrollScroll, "⚡ ป้องกันโดนสตัน / แช่แข็ง (Anti Stun / Freeze)", false, function(state)
+	antiStunActive = state
+	task.spawn(function()
+		while antiStunActive do
+			pcall(function()
+				local char = player.Character
+				local hum = char and char:FindFirstChildOfClass("Humanoid")
+				if hum then
+					hum.PlatformStand = false
+					hum.Sit = false
+				end
+			end)
+			task.wait(0.2)
+		end
+	end)
+end)
+
+createToggleButton(antiTrollScroll, "🎯 ป้องกันคนวาร์ปมาฆ่า (Anti TP-Kill / Void Troll)", false, function(state)
+	antiTpKillActive = state
+	task.spawn(function()
+		while antiTpKillActive do
+			pcall(function()
+				local char = player.Character
+				local root = char and char:FindFirstChild("HumanoidRootPart")
+				if root then
+					if root.Position.Y < -50 then
+						if originalRootCFrame then
+							root.CFrame = originalRootCFrame
+						else
+							root.CFrame = CFrame.new(0, 50, 0)
+						end
+					else
+						originalRootCFrame = root.CFrame
+					end
+				end
+			end)
+			task.wait(0.5)
+		end
+	end)
+end)
+
+--==================================================
+-- TELEPORT TAB (WITH PLAYER NAME & COORDS)
 --==================================================
 
 local function createActionButton(parent, text, callback)
@@ -928,6 +980,50 @@ local function createActionButton(parent, text, callback)
 	return btn
 end
 
+local tpBoxHolder = Instance.new("Frame")
+tpBoxHolder.Size = UDim2.new(1, -4, 0, 32)
+tpBoxHolder.BackgroundColor3 = Color3.fromRGB(14, 14, 14)
+tpBoxHolder.BorderSizePixel = 0
+tpBoxHolder.Parent = teleportScroll
+
+local tphCorner = Instance.new("UICorner")
+tphCorner.CornerRadius = UDim.new(0, 7)
+tphCorner.Parent = tpBoxHolder
+local tphStroke = Instance.new("UIStroke")
+tphStroke.Color = ThemeColor
+tphStroke.Thickness = 1
+tphStroke.Parent = tpBoxHolder
+
+local tpNameBox = Instance.new("TextBox")
+tpNameBox.Size = UDim2.new(1, -12, 1, 0)
+tpNameBox.Position = UDim2.fromOffset(6, 0)
+tpNameBox.BackgroundTransparency = 1
+tpNameBox.ClearTextOnFocus = false
+tpNameBox.PlaceholderText = "พิมพ์ชื่อผู้เล่นที่ต้องการวาร์ปไปหา..."
+tpNameBox.Text = ""
+tpNameBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+tpNameBox.TextSize = 11
+tpNameBox.Font = Enum.Font.GothamBold
+tpNameBox.TextXAlignment = Enum.TextXAlignment.Left
+tpNameBox.Parent = tpBoxHolder
+
+tpNameBox:GetPropertyChangedSignal("Text"):Connect(function()
+	targetTeleportName = tpNameBox.Text
+end)
+
+createActionButton(teleportScroll, "🎯 วาร์ปไปหาผู้เล่นตามชื่อที่พิมพ์", function()
+	for _, p in pairs(Players:GetPlayers()) do
+		if p ~= player and (string.lower(p.Name):sub(1, #targetTeleportName) == string.lower(targetTeleportName) or string.lower(p.DisplayName):sub(1, #targetTeleportName) == string.lower(targetTeleportName)) then
+			if p.Character and p.Character:FindFirstChild("HumanoidRootPart") and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+				player.Character.HumanoidRootPart.CFrame = p.Character.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
+				SendNotification("Teleport", "วาร์ปไปหา " .. p.DisplayName .. " แล้ว", 1.5)
+				return
+			end
+		end
+	end
+	SendNotification("Teleport", "ไม่พบผู้เล่นดังกล่าว", 1.5)
+end)
+
 createActionButton(teleportScroll, "📍 บันทึกตำแหน่งปัจจุบัน (Save Pos)", function()
 	local char = player.Character
 	if char and char:FindFirstChild("HumanoidRootPart") then
@@ -953,7 +1049,7 @@ createActionButton(teleportScroll, "🏠 วาร์ปกลับจุดเ
 end)
 
 --==================================================
--- SERVER HOP TAB (แท็บใหม่: ย้ายเชิฟ)
+-- SERVER HOP TAB
 --==================================================
 
 createActionButton(serverHopScroll, "🔄 รีเซิร์ฟเวอร์เดิม (Rejoin Server)", function()
@@ -1131,7 +1227,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 --==================================================
--- OPTIMIZATION TAB (Anti-Lag, Ultra Anti-Lag, FPS & Potato Mode)
+-- OPTIMIZATION TAB
 --==================================================
 
 createActionButton(optimizationScroll, "⚡ เปิดสคริปต์ลดแล็ค (Anti-Lag)", function()
@@ -1357,7 +1453,7 @@ Players.PlayerAdded:Connect(refreshInspectorList)
 Players.PlayerRemoving:Connect(refreshInspectorList)
 
 --==================================================
--- SCRIPT EXECUTOR TAB
+-- SCRIPT EXECUTOR TAB (WITH AUTO-EXECUTE)
 --==================================================
 
 local nameBoxHolder = Instance.new("Frame")
@@ -1483,6 +1579,30 @@ createExecButton("💾 บันทึก", Color3.fromRGB(60, 60, 160), functio
 	end
 end)
 
+createActionButton(executorScroll, "⚙️ ตั้งค่าโค้ดนี้ให้รันออโต้เมื่อเข้าเกม (Auto-Execute)", function()
+	if writefile and scriptTextBox.Text ~= "" then
+		pcall(function()
+			writefile(autoExecuteFileName, scriptTextBox.Text)
+		end)
+		SendNotification("Auto-Execute", "บันทึก Auto-Execute สำเร็จแล้ว", 1.5)
+	end
+end)
+
+task.spawn(function()
+	if readfile and isfile and isfile(autoExecuteFileName) then
+		local success, code = pcall(function()
+			return readfile(autoExecuteFileName)
+		end)
+		if success and code and code ~= "" then
+			task.wait(1)
+			pcall(function()
+				loadstring(code)()
+			end)
+			SendNotification("Auto-Execute", "รันสคริปต์ Auto-Execute สำเร็จ", 2)
+		end
+	end
+end)
+
 local scriptListLabel = Instance.new("TextLabel")
 scriptListLabel.Size = UDim2.new(1, -4, 0, 20)
 scriptListLabel.BackgroundTransparency = 1
@@ -1581,7 +1701,7 @@ end
 refreshScriptList()
 
 --==================================================
--- ITEMS & ESP TAB (พร้อม Hitbox Extender)
+-- ITEMS & ADVANCED ESP TAB (WITH HEALTH, DISTANCE, CHAMS)
 --==================================================
 
 createToggleButton(itemsScroll, "ESP กล่อง (Box ESP)", false, function(state)
@@ -1590,6 +1710,18 @@ end)
 
 createToggleButton(itemsScroll, "ESP เส้นเลือด (Tracer ESP)", false, function(state)
 	espTracerEnabled = state
+end)
+
+createToggleButton(itemsScroll, "❤️ แสดงเลือดผู้เล่น (Health Bar)", true, function(state)
+	espHealthBarEnabled = state
+end)
+
+createToggleButton(itemsScroll, "📏 แสดงระยะห่าง (Distance)", true, function(state)
+	espDistanceEnabled = state
+end)
+
+createToggleButton(itemsScroll, "✨ เปิดระบบ Chams มองทะลุ (Highlight Chams)", false, function(state)
+	chamsEnabled = state
 end)
 
 createToggleButton(itemsScroll, "🎯 ขยายฮิตบ็อกซ์เป้าหมาย (Hitbox Expander)", false, function(state)
@@ -1621,9 +1753,34 @@ RunService.Heartbeat:Connect(function()
 			end
 		end
 	end
+
+	for _, p in pairs(Players:GetPlayers()) do
+		if p ~= player then
+			if chamsEnabled then
+				if p.Character and not chamsStorage[p] then
+					local hl = Instance.new("Highlight")
+					hl.Name = "ScoopChams"
+					hl.FillColor = EspColor
+					hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+					hl.FillTransparency = 0.5
+					hl.OutlineTransparency = 0
+					hl.Parent = p.Character
+					chamsStorage[p] = hl
+				end
+			else
+				if chamsStorage[p] then
+					chamsStorage[p]:Destroy()
+					chamsStorage[p] = nil
+				end
+			end
+		end
+	end
 end)
 
 RunService.RenderStepped:Connect(function()
+	local myChar = player.Character
+	local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+
 	for _, p in pairs(Players:GetPlayers()) do
 		if p ~= player then
 			local char = p.Character
@@ -1632,22 +1789,49 @@ RunService.RenderStepped:Connect(function()
 			local isAlive = (char and rootPart and humanoid and humanoid.Health > 0)
 			
 			if not espStorage[p] then
-				espStorage[p] = { Box = Drawing.new("Square"), Tracer = Drawing.new("Line"), Text = Drawing.new("Text") }
+				espStorage[p] = { Box = Drawing.new("Square"), Tracer = Drawing.new("Line"), Text = Drawing.new("Text"), HealthBg = Drawing.new("Square"), HealthBar = Drawing.new("Square") }
 			end
 			local visuals = espStorage[p]
 			
 			if isAlive and (espBoxEnabled or espTracerEnabled) then
 				local vector, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
 				if onScreen then
+					local distStr = ""
+					if espDistanceEnabled and myRoot then
+						local dist = math.floor((rootPart.Position - myRoot.Position).Magnitude)
+						distStr = " [" .. dist .. "m]"
+					end
+
 					if espBoxEnabled then
 						visuals.Box.Visible = true
 						visuals.Box.Size = Vector2.new(40, 60)
 						visuals.Box.Position = Vector2.new(vector.X - 20, vector.Y - 30)
 						visuals.Box.Color = EspColor
 						visuals.Box.Thickness = 1.5
+
+						if espHealthBarEnabled then
+							local healthPercent = math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1)
+							visuals.HealthBg.Visible = true
+							visuals.HealthBg.Size = Vector2.new(3, 60)
+							visuals.HealthBg.Position = Vector2.new(vector.X - 25, vector.Y - 30)
+							visuals.HealthBg.Color = Color3.fromRGB(0, 0, 0)
+							visuals.HealthBg.Filled = true
+
+							visuals.HealthBar.Visible = true
+							visuals.HealthBar.Size = Vector2.new(3, 60 * healthPercent)
+							visuals.HealthBar.Position = Vector2.new(vector.X - 25, vector.Y - 30 + (60 * (1 - healthPercent)))
+							visuals.HealthBar.Color = Color3.fromRGB(0, 255, 0)
+							visuals.HealthBar.Filled = true
+						else
+							visuals.HealthBg.Visible = false
+							visuals.HealthBar.Visible = false
+						end
 					else
 						visuals.Box.Visible = false
+						visuals.HealthBg.Visible = false
+						visuals.HealthBar.Visible = false
 					end
+
 					if espTracerEnabled then
 						visuals.Tracer.Visible = true
 						visuals.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
@@ -1657,8 +1841,9 @@ RunService.RenderStepped:Connect(function()
 					else
 						visuals.Tracer.Visible = false
 					end
+
 					visuals.Text.Visible = true
-					visuals.Text.Text = p.Name
+					visuals.Text.Text = p.Name .. distStr
 					visuals.Text.Size = 12
 					visuals.Text.Center = true
 					visuals.Text.Outline = true
@@ -1668,12 +1853,16 @@ RunService.RenderStepped:Connect(function()
 					visuals.Box.Visible = false
 					visuals.Tracer.Visible = false
 					visuals.Text.Visible = false
+					visuals.HealthBg.Visible = false
+					visuals.HealthBar.Visible = false
 				end
 			else
 				if visuals then
 					visuals.Box.Visible = false
 					visuals.Tracer.Visible = false
 					visuals.Text.Visible = false
+					visuals.HealthBg.Visible = false
+					visuals.HealthBar.Visible = false
 				end
 			end
 		end
@@ -1780,9 +1969,9 @@ end)
 --==================================================
 
 local aboutText = Instance.new("TextLabel")
-aboutText.Size = UDim2.new(1, -4, 0, 260)
+aboutText.Size = UDim2.new(1, -4, 0, 300)
 aboutText.BackgroundTransparency = 1
-aboutText.Text = "SCOOP All-in-One Ultimate Hub v4.7\n\n- เพิ่มแท็บใหม่ 'ย้ายเชิฟ' (Server Hop / Rejoin)\n- เพิ่มระบบ Notification เด้งเตือนเมื่อกดใช้งานฟังก์ชันต่างๆ\n- รวมระบบ Hitbox Extender พร้อมแถบปรับขนาด (Size)\n- เพิ่มระบบ Anti-Lag, Ultra Anti-Lag, FPS Cap และ Potato Mode\n- เพิ่มระบบส่องผู้เล่น (Player Inspector & Spectate)\n- ระบบ Script Executor และ Saved Scripts สมบูรณ์แบบ\n- กดปุ่ม [ RightShift ] เพื่อเปิด/ปิดหน้าต่างเมนู"
+aboutText.Text = "SCOOP All-in-One Ultimate Hub v4.9 (Anti-Troll Edition)\n\n- เพิ่มแท็บ [🛡️ กันโดนแกล้ง] รวมฟังก์ชันป้องกันผู้เล่นอื่นกลั่นแกล้ง:\n  • ป้องกันสแปมเสียง (Anti Sound Spam)\n  • ป้องกันคนปั่นตัวปลิว (Anti Fling / Spin)\n  • ป้องกันคนแย่งหรือดึงไอเทม (Anti Tool Steal/Drop)\n  • ป้องกันโดนสตัน / แช่แข็ง (Anti Stun / Freeze)\n  • ป้องกันคนวาร์ปมาฆ่า / ตกแมพ (Anti TP-Kill / Void)\n- ปรับปรุงโครงสร้างสคริปต์ให้เสถียรยิ่งขึ้น\n- กดปุ่ม [ RightShift ] เพื่อเปิด/ปิดหน้าต่างเมนู"
 aboutText.TextColor3 = Color3.fromRGB(180,180,180)
 aboutText.TextSize = 11
 aboutText.Font = Enum.Font.Gotham
@@ -1876,5 +2065,4 @@ UserInputService.InputEnded:Connect(function(input)
 	end
 end)
 
-print("SCOOP All-in-One Ultimate Hub v4.7 Loaded Successfully (With Server Hop)")
-
+print("SCOOP All-in-One Ultimate Hub v4.9 (Anti-Troll Edition) Loaded Successfully")
